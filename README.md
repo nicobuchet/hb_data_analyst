@@ -47,12 +47,15 @@ pip install -r requirements.txt
 3. Configure secrets:
 
    **For local development:**
+
    - Option A: Create a `.env` file (recommended for scripts)
+
      ```bash
      cp .env.example .env
      ```
+
      Then edit `.env` and add your Supabase credentials
-   
+
    - Option B: Create `.streamlit/secrets.toml` (recommended for dashboard)
      ```bash
      cp .streamlit/secrets.toml.example .streamlit/secrets.toml
@@ -60,6 +63,7 @@ pip install -r requirements.txt
      Then edit `.streamlit/secrets.toml` and add your Supabase credentials
 
    **For Streamlit Cloud deployment:**
+
    - Go to https://share.streamlit.io/
    - Select your app → Settings → Secrets
    - Add your credentials in TOML format:

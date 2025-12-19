@@ -9,3 +9,6 @@ __pycache__/
 
 # Streamlit secrets
 .streamlit/secrets.toml
+
+src/scripts/match_actions.csv
+src/scripts/match_stats.csv
