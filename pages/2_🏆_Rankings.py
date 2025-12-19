@@ -28,7 +28,6 @@ with st.sidebar:
     st.info("**Page actuelle:** Classements")
 
 st.title("🏆 Classements")
-st.write("Consultez le classement de la ligue.")
 
 try:
     # Charger les données
@@ -39,10 +38,10 @@ try:
         st.info("Aucune donnée de match disponible. Importez des matchs pour voir les classements !")
     else:
         # Créer des onglets pour les différents classements
-        tab1, tab2, tab3 = st.tabs(["📊 Classement général", "🏠 Classement domicile", "✈️ Classement extérieur"])
+        tab1, tab2, tab3, tab4 = st.tabs(["📊 Classement général", "🏠 Classement domicile", "✈️ Classement extérieur", "⏱️ Classement mi-temps"])
         
         # Fonction pour calculer les statistiques
-        def calculate_standings(matches_df, teams_df, match_type='all'):
+        def calculate_standings(matches_df, teams_df, match_type='all', score_type='final'):
             team_stats = []
             
             for team_id in teams_df['id'].unique():
@@ -55,17 +54,25 @@ try:
                 goals_for = 0
                 goals_against = 0
                 
+                # Sélectionner les colonnes de score appropriées
+                if score_type == 'halftime':
+                    home_score_col = 'ht_score_home'
+                    away_score_col = 'ht_score_away'
+                else:
+                    home_score_col = 'final_score_home'
+                    away_score_col = 'final_score_away'
+                
                 if match_type in ['all', 'home']:
                     # Matchs à domicile
                     home_matches = matches_df[matches_df['home_team_id'] == team_id]
                     for _, match in home_matches.iterrows():
-                        if pd.notna(match['final_score_home']) and pd.notna(match['final_score_away']):
-                            goals_for += match['final_score_home']
-                            goals_against += match['final_score_away']
+                        if pd.notna(match[home_score_col]) and pd.notna(match[away_score_col]):
+                            goals_for += match[home_score_col]
+                            goals_against += match[away_score_col]
                             
-                            if match['final_score_home'] > match['final_score_away']:
+                            if match[home_score_col] > match[away_score_col]:
                                 wins += 1
-                            elif match['final_score_home'] == match['final_score_away']:
+                            elif match[home_score_col] == match[away_score_col]:
                                 draws += 1
                             else:
                                 losses += 1
@@ -74,13 +81,13 @@ try:
                     # Matchs à l'extérieur
                     away_matches = matches_df[matches_df['away_team_id'] == team_id]
                     for _, match in away_matches.iterrows():
-                        if pd.notna(match['final_score_home']) and pd.notna(match['final_score_away']):
-                            goals_for += match['final_score_away']
-                            goals_against += match['final_score_home']
+                        if pd.notna(match[home_score_col]) and pd.notna(match[away_score_col]):
+                            goals_for += match[away_score_col]
+                            goals_against += match[home_score_col]
                             
-                            if match['final_score_away'] > match['final_score_home']:
+                            if match[away_score_col] > match[home_score_col]:
                                 wins += 1
-                            elif match['final_score_away'] == match['final_score_home']:
+                            elif match[away_score_col] == match[home_score_col]:
                                 draws += 1
                             else:
                                 losses += 1
@@ -178,6 +185,28 @@ try:
                 )
             else:
                 st.info("Aucun match à l'extérieur terminé trouvé.")
+        
+        # Onglet 4: Classement mi-temps
+        with tab4:
+            st.markdown("### Classement mi-temps")
+            st.info("Classement basé sur les scores à la mi-temps")
+            halftime_standings_df = calculate_standings(matches_df, teams_df, 'all', 'halftime')
+            
+            if halftime_standings_df is not None:
+                st.dataframe(
+                    halftime_standings_df,
+                    use_container_width=True,
+                    hide_index=True
+                )
+                
+                st.download_button(
+                    label="📥 Télécharger le classement mi-temps CSV",
+                    data=halftime_standings_df.to_csv(index=False).encode('utf-8'),
+                    file_name='classement_mi_temps.csv',
+                    mime='text/csv',
+                )
+            else:
+                st.info("Aucun match avec score mi-temps disponible.")
 
 except Exception as e:
     st.error(f"Erreur lors du chargement des données de classement : {str(e)}")
