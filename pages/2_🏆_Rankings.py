@@ -7,9 +7,23 @@ from src.database import get_matches, get_player_stats, get_teams
 
 st.set_page_config(page_title="Classements", page_icon="🏆", layout="wide")
 
+# Cacher la navigation par défaut de Streamlit
+st.markdown("""
+    <style>
+    [data-testid="stSidebarNav"] {
+        display: none;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 # Sidebar
 with st.sidebar:
     st.markdown("## 🤾 Navigation")
+    st.markdown("---")
+    
+    st.page_link("app.py", label="Accueil", icon="🏠")
+    st.page_link("pages/2_🏆_Rankings.py", label="Classements", icon="🏆")
+    
     st.markdown("---")
     st.info("**Page actuelle:** Classements")
 

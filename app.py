@@ -5,7 +5,7 @@ import streamlit as st
 
 # Configuration de la page
 st.set_page_config(
-    page_title="Tableau de Bord Handball",
+    page_title="Dashboard Handball",
     page_icon="🤾",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -15,25 +15,29 @@ st.set_page_config(
 with st.sidebar:
     st.markdown("## 🤾 Navigation")
     st.markdown("---")
+    
+    st.markdown("### 📊 Pages disponibles")
+    st.page_link("app.py", label="Accueil", icon="🏠")
+    st.page_link("pages/2_🏆_Rankings.py", label="Classements", icon="🏆")
+    
+    st.markdown("---")
+    st.markdown("### 📈 À venir")
     st.markdown("""
-    ### 📊 Pages disponibles
-    
-    - **🏠 Accueil** - Vue d'ensemble
-    - **📊 Ligues** - Informations sur les ligues
-    - **🏆 Classements** - Classements et statistiques
-    
-    ### 📈 À venir
+    - Ligues
     - Équipes
     - Joueurs
     - Matchs
     - Statistiques avancées
     """)
-    st.markdown("---")
-    st.markdown("**💡 Conseil:** Utilisez le menu ci-dessus pour naviguer entre les pages.")
 
 # CSS personnalisé
 st.markdown("""
     <style>
+    /* Cacher la navigation par défaut de Streamlit */
+    [data-testid="stSidebarNav"] {
+        display: none;
+    }
+    
     .main-header {
         font-size: 3rem;
         font-weight: bold;
@@ -64,20 +68,12 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # Contenu principal
-st.markdown('<div class="main-header">🤾 Tableau de Bord Handball</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header">🤾 Dashboard Handball</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">Analyse et visualisation complète des données de matchs de handball</div>', unsafe_allow_html=True)
-
-# Message de bienvenue
-st.write("---")
-st.markdown("### Bienvenue sur le Tableau de Bord Handball !")
-st.write("""
-Ce tableau de bord fournit des analyses et des insights complets à partir des données de matchs de handball stockées dans Supabase.
-Explorez les différentes sections en utilisant le menu de navigation pour accéder aux informations détaillées sur les ligues, les équipes, les joueurs et les matchs.
-""")
 
 # Section statistiques rapides
 st.write("---")
-st.markdown("### 📊 Vue d'ensemble rapide")
+st.markdown("### 📊 Overview")
 
 try:
     from src.database import get_leagues, get_teams, get_players, get_matches
@@ -86,19 +82,19 @@ try:
     
     with col1:
         leagues_df = get_leagues()
-        st.metric("Ligues totales", len(leagues_df))
+        st.metric("Championnats", len(leagues_df))
     
     with col2:
         teams_df = get_teams()
-        st.metric("Équipes totales", len(teams_df))
+        st.metric("Équipes", len(teams_df))
     
     with col3:
         players_df = get_players()
-        st.metric("Joueurs totaux", len(players_df))
+        st.metric("Joueurs", len(players_df))
     
     with col4:
         matches_df = get_matches()
-        st.metric("Matchs totaux", len(matches_df))
+        st.metric("Matchs", len(matches_df))
 
 except Exception as e:
     st.warning("⚠️ Impossible de charger les statistiques de la base de données. Veuillez vous assurer que votre connexion Supabase est correctement configurée.")
@@ -163,17 +159,6 @@ with col2:
         </ul>
     </div>
     """, unsafe_allow_html=True)
-
-# Section pour commencer
-st.write("---")
-st.markdown("### 🚀 Pour commencer")
-st.info("""
-1. **Configurer la base de données** : Configurez votre fichier `.env` avec vos identifiants Supabase
-2. **Naviguer** : Utilisez le menu de navigation pour explorer les différentes sections
-3. **Filtrer** : Appliquez des filtres pour affiner votre vue des données
-4. **Analyser** : Interagissez avec les visualisations et tableaux
-5. **Exporter** : Téléchargez les données pour une analyse plus approfondie
-""")
 
 # Pied de page
 st.write("---")
