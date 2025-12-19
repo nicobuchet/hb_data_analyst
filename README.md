@@ -44,15 +44,29 @@ cd hb_data_analyst_v2
 pip install -r requirements.txt
 ```
 
-3. Configure environment variables:
+3. Configure secrets:
 
-   - Copy `.env.example` to `.env`
-   - Add your Supabase credentials:
+   **For local development:**
+   - Option A: Create a `.env` file (recommended for scripts)
+     ```bash
+     cp .env.example .env
+     ```
+     Then edit `.env` and add your Supabase credentials
+   
+   - Option B: Create `.streamlit/secrets.toml` (recommended for dashboard)
+     ```bash
+     cp .streamlit/secrets.toml.example .streamlit/secrets.toml
+     ```
+     Then edit `.streamlit/secrets.toml` and add your Supabase credentials
 
-   ```
-   SUPABASE_URL=your_supabase_project_url
-   SUPABASE_KEY=your_supabase_anon_key
-   ```
+   **For Streamlit Cloud deployment:**
+   - Go to https://share.streamlit.io/
+   - Select your app → Settings → Secrets
+   - Add your credentials in TOML format:
+     ```toml
+     SUPABASE_URL = "https://your-project.supabase.co"
+     SUPABASE_KEY = "your_supabase_anon_key"
+     ```
 
 4. Set up your Supabase database:
    - Run the SQL script in `src/sql/create_tables.sql` in your Supabase SQL Editor
