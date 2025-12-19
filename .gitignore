@@ -1,6 +1,11 @@
 venv
 .env
-src/__pycache__/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
 
 # Streamlit secrets
 .streamlit/secrets.toml
