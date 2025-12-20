@@ -14,6 +14,7 @@ def get_supabase_client() -> Client:
 def query_to_dataframe(table_name: str, query_params: dict = None) -> pd.DataFrame:
     """
     Query a Supabase table and return results as a pandas DataFrame
+    Automatically handles pagination to fetch all rows.
     
     Args:
         table_name: Name of the table to query
@@ -23,17 +24,42 @@ def query_to_dataframe(table_name: str, query_params: dict = None) -> pd.DataFra
         pandas DataFrame with query results
     """
     client = get_supabase_client()
-    query = client.table(table_name).select("*")
     
-    if query_params:
-        # Add filters if provided
-        if "limit" in query_params:
-            query = query.limit(query_params["limit"])
+    # If a specific limit is requested, use single query
+    if query_params and "limit" in query_params:
+        query = client.table(table_name).select("*")
+        query = query.limit(query_params["limit"])
         if "order" in query_params:
             query = query.order(query_params["order"])
+        response = query.execute()
+        return pd.DataFrame(response.data)
     
-    response = query.execute()
-    return pd.DataFrame(response.data)
+    # Otherwise, fetch all rows with pagination
+    all_data = []
+    page_size = 1000
+    offset = 0
+    
+    while True:
+        query = client.table(table_name).select("*").range(offset, offset + page_size - 1)
+        
+        if query_params and "order" in query_params:
+            query = query.order(query_params["order"])
+        
+        response = query.execute()
+        data = response.data
+        
+        if not data:
+            break
+        
+        all_data.extend(data)
+        
+        # If we got fewer rows than page_size, we've reached the end
+        if len(data) < page_size:
+            break
+        
+        offset += page_size
+    
+    return pd.DataFrame(all_data)
 
 
 def get_leagues() -> pd.DataFrame:
