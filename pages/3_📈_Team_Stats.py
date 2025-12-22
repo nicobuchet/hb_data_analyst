@@ -41,7 +41,7 @@ try:
         st.info("Aucune donnée de match disponible. Importez des matchs pour voir les statistiques !")
     else:
         # Créer des onglets pour différentes statistiques
-        tab1, tab2, tab3, tab4 = st.tabs(["⚽ Buts marqués", "🥅 Buts encaissés", "🎯 Pourcentage de réussite", "🧤 Arrêts"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["⚽ Buts marqués", "🥅 Buts encaissés", "🎯 Pourcentage de réussite", "🧤 Arrêts", "🎯 Buts 7m"])
         
         # Fonction pour calculer les statistiques de buts
         def calculate_goal_stats(matches_df, teams_df):
@@ -381,6 +381,107 @@ try:
                     )
                 else:
                     st.info("Aucune statistique de gardien disponible.")
+            else:
+                st.info("Aucune statistique de joueur disponible.")
+        
+        # Onglet 5: Buts 7m
+        with tab5:
+            st.markdown("### 🎯 Classement des buts 7m")
+            
+            if not player_stats_df.empty:
+                # Filtrer les joueurs (non officiels)
+                players = player_stats_df[player_stats_df['is_official'] == False].copy()
+                
+                if not players.empty:
+                    # Grouper par équipe et sommer les buts 7m
+                    goals_7m_stats = players.groupby('team_name').agg({
+                        'goals_7m': 'sum'
+                    }).reset_index()
+                    
+                    # Filtrer les équipes avec au moins 1 but 7m
+                    goals_7m_stats = goals_7m_stats[goals_7m_stats['goals_7m'] > 0].copy()
+                    
+                    # Calculer le nombre de matchs par équipe depuis la table matches
+                    team_matches = []
+                    for team_id in teams_df['id'].unique():
+                        team_name = teams_df[teams_df['id'] == team_id]['name'].iloc[0]
+                        # Compter les matchs à domicile et à l'extérieur
+                        home_matches = matches_df[
+                            (matches_df['home_team_id'] == team_id) & 
+                            (matches_df['final_score_home'].notna())
+                        ]
+                        away_matches = matches_df[
+                            (matches_df['away_team_id'] == team_id) & 
+                            (matches_df['final_score_away'].notna())
+                        ]
+                        total_matches = len(home_matches) + len(away_matches)
+                        if total_matches > 0:
+                            team_matches.append({'team_name': team_name, 'matches': total_matches})
+                    
+                    matches_per_team = pd.DataFrame(team_matches)
+                    
+                    # Fusionner avec les stats de buts 7m
+                    goals_7m_stats = goals_7m_stats.merge(matches_per_team, on='team_name', how='left')
+                    
+                    # Remplir les matchs manquants avec 0
+                    goals_7m_stats['matches'] = goals_7m_stats['matches'].fillna(0).astype(int)
+                    
+                    # Calculer la moyenne de buts 7m par match
+                    goals_7m_stats['Moy 7m'] = goals_7m_stats.apply(
+                        lambda row: round(row['goals_7m'] / row['matches'], 2) if row['matches'] > 0 else 0,
+                        axis=1
+                    )
+                    
+                    # Renommer les colonnes
+                    goals_7m_stats = goals_7m_stats.rename(columns={
+                        'team_name': 'Équipe',
+                        'goals_7m': 'Buts 7m',
+                        'matches': 'Matchs'
+                    })
+                    
+                    # Trier par buts 7m (ordre décroissant)
+                    goals_7m_stats = goals_7m_stats.sort_values('Buts 7m', ascending=False).reset_index(drop=True)
+                    goals_7m_stats.insert(0, 'Rang', range(1, len(goals_7m_stats) + 1))
+                    
+                    # Réorganiser les colonnes
+                    goals_7m_stats = goals_7m_stats[['Rang', 'Équipe', 'Buts 7m', 'Moy 7m', 'Matchs']]
+                    
+                    st.dataframe(
+                        goals_7m_stats,
+                        use_container_width=True,
+                        hide_index=True
+                    )
+                    
+                    # Statistiques rapides
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        best_7m = goals_7m_stats.iloc[0]
+                        st.metric(
+                            "Meilleure efficacité 7m",
+                            best_7m['Équipe'],
+                            f"{int(best_7m['Buts 7m'])} buts"
+                        )
+                    with col2:
+                        avg_7m = goals_7m_stats['Buts 7m'].mean()
+                        st.metric(
+                            "Moyenne de la ligue",
+                            f"{avg_7m:.1f} buts"
+                        )
+                    with col3:
+                        total_7m = goals_7m_stats['Buts 7m'].sum()
+                        st.metric(
+                            "Total de buts 7m",
+                            f"{int(total_7m)}"
+                        )
+                    
+                    st.download_button(
+                        label="📥 Télécharger les statistiques CSV",
+                        data=goals_7m_stats.to_csv(index=False).encode('utf-8'),
+                        file_name='stats_buts_7m.csv',
+                        mime='text/csv',
+                    )
+                else:
+                    st.info("Aucune statistique de joueur disponible.")
             else:
                 st.info("Aucune statistique de joueur disponible.")
 
