@@ -41,7 +41,7 @@ try:
         st.info("Aucune donnée de match disponible. Importez des matchs pour voir les statistiques !")
     else:
         # Créer des onglets pour différentes statistiques
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["⚽ Buts marqués", "🥅 Buts encaissés", "🎯 Pourcentage de réussite", "🧤 Arrêts", "🎯 Buts 7m"])
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["⚽ Buts marqués", "🥅 Buts encaissés", "🎯 Pourcentage de réussite", "🧤 Arrêts", "🎯 Buts 7m", "⚠️ Sanctions"])
         
         # Fonction pour calculer les statistiques de buts
         def calculate_goal_stats(matches_df, teams_df):
@@ -478,6 +478,123 @@ try:
                         label="📥 Télécharger les statistiques CSV",
                         data=goals_7m_stats.to_csv(index=False).encode('utf-8'),
                         file_name='stats_buts_7m.csv',
+                        mime='text/csv',
+                    )
+                else:
+                    st.info("Aucune statistique de joueur disponible.")
+            else:
+                st.info("Aucune statistique de joueur disponible.")
+        
+        # Onglet 6: Sanctions
+        with tab6:
+            st.markdown("### ⚠️ Classement des sanctions")
+            
+            if not player_stats_df.empty:
+                # Filtrer les joueurs (non officiels)
+                players = player_stats_df[player_stats_df['is_official'] == False].copy()
+                
+                if not players.empty:
+                    # Grouper par équipe et sommer toutes les sanctions
+                    sanctions_stats = players.groupby('team_name').agg({
+                        'yellow_cards': 'sum',
+                        'two_minutes': 'sum',
+                        'red_cards': 'sum',
+                        'blue_cards': 'sum'
+                    }).reset_index()
+                    
+                    # Calculer le total des sanctions
+                    sanctions_stats['Total sanctions'] = (
+                        sanctions_stats['yellow_cards'] + 
+                        sanctions_stats['two_minutes'] + 
+                        sanctions_stats['red_cards'] + 
+                        sanctions_stats['blue_cards']
+                    )
+                    
+                    # Filtrer les équipes avec au moins 1 sanction
+                    sanctions_stats = sanctions_stats[sanctions_stats['Total sanctions'] > 0].copy()
+                    
+                    # Calculer le nombre de matchs par équipe depuis la table matches
+                    team_matches = []
+                    for team_id in teams_df['id'].unique():
+                        team_name = teams_df[teams_df['id'] == team_id]['name'].iloc[0]
+                        # Compter les matchs à domicile et à l'extérieur
+                        home_matches = matches_df[
+                            (matches_df['home_team_id'] == team_id) & 
+                            (matches_df['final_score_home'].notna())
+                        ]
+                        away_matches = matches_df[
+                            (matches_df['away_team_id'] == team_id) & 
+                            (matches_df['final_score_away'].notna())
+                        ]
+                        total_matches = len(home_matches) + len(away_matches)
+                        if total_matches > 0:
+                            team_matches.append({'team_name': team_name, 'matches': total_matches})
+                    
+                    matches_per_team = pd.DataFrame(team_matches)
+                    
+                    # Fusionner avec les stats de sanctions
+                    sanctions_stats = sanctions_stats.merge(matches_per_team, on='team_name', how='left')
+                    
+                    # Remplir les matchs manquants avec 0
+                    sanctions_stats['matches'] = sanctions_stats['matches'].fillna(0).astype(int)
+                    
+                    # Calculer la moyenne de sanctions par match
+                    sanctions_stats['Moy sanctions'] = sanctions_stats.apply(
+                        lambda row: round(row['Total sanctions'] / row['matches'], 2) if row['matches'] > 0 else 0,
+                        axis=1
+                    )
+                    
+                    # Renommer les colonnes
+                    sanctions_stats = sanctions_stats.rename(columns={
+                        'team_name': 'Équipe',
+                        'yellow_cards': 'Cartons jaunes',
+                        'two_minutes': '2 minutes',
+                        'red_cards': 'Cartons rouges',
+                        'blue_cards': 'Cartons bleus',
+                        'matches': 'Matchs'
+                    })
+                    
+                    # Trier par total sanctions (ordre décroissant)
+                    sanctions_stats = sanctions_stats.sort_values('Total sanctions', ascending=False).reset_index(drop=True)
+                    sanctions_stats.insert(0, 'Rang', range(1, len(sanctions_stats) + 1))
+                    
+                    # Réorganiser les colonnes pour mettre Total sanctions en premier après Équipe
+                    sanctions_stats = sanctions_stats[['Rang', 'Équipe', 'Total sanctions', 'Moy sanctions', 
+                                                        'Cartons jaunes', '2 minutes', 'Cartons rouges', 
+                                                        'Cartons bleus', 'Matchs']]
+                    
+                    st.dataframe(
+                        sanctions_stats,
+                        use_container_width=True,
+                        hide_index=True
+                    )
+                    
+                    # Statistiques rapides
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        most_sanctioned = sanctions_stats.iloc[0]
+                        st.metric(
+                            "Équipe la plus sanctionnée",
+                            most_sanctioned['Équipe'],
+                            f"{int(most_sanctioned['Total sanctions'])} sanctions"
+                        )
+                    with col2:
+                        avg_sanctions = sanctions_stats['Total sanctions'].mean()
+                        st.metric(
+                            "Moyenne de la ligue",
+                            f"{avg_sanctions:.1f}"
+                        )
+                    with col3:
+                        total_sanctions = sanctions_stats['Total sanctions'].sum()
+                        st.metric(
+                            "Total de sanctions",
+                            f"{int(total_sanctions)}"
+                        )
+                    
+                    st.download_button(
+                        label="📥 Télécharger les statistiques CSV",
+                        data=sanctions_stats.to_csv(index=False).encode('utf-8'),
+                        file_name='stats_sanctions.csv',
                         mime='text/csv',
                     )
                 else:
