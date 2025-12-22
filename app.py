@@ -20,6 +20,7 @@ with st.sidebar:
     st.page_link("app.py", label="Accueil", icon="🏠")
     st.page_link("pages/2_🏆_Rankings.py", label="Classements", icon="🏆")
     st.page_link("pages/3_📈_Team_Stats.py", label="Statistiques d'équipes", icon="📈")
+    st.page_link("pages/4_👤_Player_Stats.py", label="Statistiques de joueurs", icon="👤")
     
     st.markdown("---")
     st.markdown("### 📈 À venir")
