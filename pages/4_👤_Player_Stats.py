@@ -9,7 +9,8 @@ from src.pages.player_stats import (
     tab_7m_ranking,
     tab_best_performances,
     tab_best_7m_performances,
-    tab_best_goalkeeper_performances
+    tab_best_goalkeeper_performances,
+    tab_sanctions
 )
 
 st.set_page_config(page_title="Statistiques de joueurs", page_icon="👤", layout="wide")
@@ -49,13 +50,14 @@ try:
         st.info("Aucune donnée de joueur disponible. Importez des matchs pour voir les statistiques !")
     else:
         # Créer des onglets pour différentes statistiques
-        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
             "⚽ Classement des buteurs", 
             "🧤 Classement des gardiens", 
             "🎯 Classement des 7m",
             "🌟 Meilleures performances",
             "🎯 Meilleures perf. 7m",
-            "🧤 Meilleures perf. gardiens"
+            "🧤 Meilleures perf. gardiens",
+            "⚠️ Classement des sanctions"
         ])
         
         # Onglet 1: Classement des buteurs
@@ -81,6 +83,10 @@ try:
         # Onglet 6: Meilleures performances gardiens
         with tab6:
             tab_best_goalkeeper_performances.render(player_stats_df, matches_df, teams_df)
+        
+        # Onglet 7: Classement des sanctions
+        with tab7:
+            tab_sanctions.render(player_stats_df, matches_df, teams_df)
 
 except Exception as e:
     st.error(f"Erreur lors du chargement des statistiques : {str(e)}")
