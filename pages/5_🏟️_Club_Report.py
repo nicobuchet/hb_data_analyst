@@ -3,6 +3,7 @@ Page Rapport de Club - Rechercher et analyser les statistiques d'un club
 """
 import streamlit as st
 import pandas as pd
+import traceback
 from src.database import get_matches, get_teams, get_player_stats
 
 st.set_page_config(page_title="Rapport de Club", page_icon="🏟️", layout="wide")
@@ -224,6 +225,240 @@ try:
                 
                 st.markdown("---")
                 
+                # === MEILLEURE VICTOIRE ET PIRE DÉFAITE ===
+                st.markdown("### 🏆 Meilleure Victoire & 😞 Pire Défaite")
+                
+                # Calculer le classement de toutes les équipes
+                def calculate_team_ranking(matches_df, teams_df):
+                    team_stats = {}
+                    
+                    for tid in teams_df['id'].unique():
+                        wins = 0
+                        draws = 0
+                        losses = 0
+                        goals_for = 0
+                        goals_against = 0
+                        
+                        # Matchs à domicile
+                        home_matches = matches_df[matches_df['home_team_id'] == tid]
+                        for _, match in home_matches.iterrows():
+                            if pd.notna(match['final_score_home']) and pd.notna(match['final_score_away']):
+                                goals_for += match['final_score_home']
+                                goals_against += match['final_score_away']
+                                if match['final_score_home'] > match['final_score_away']:
+                                    wins += 1
+                                elif match['final_score_home'] == match['final_score_away']:
+                                    draws += 1
+                                else:
+                                    losses += 1
+                        
+                        # Matchs à l'extérieur
+                        away_matches = matches_df[matches_df['away_team_id'] == tid]
+                        for _, match in away_matches.iterrows():
+                            if pd.notna(match['final_score_home']) and pd.notna(match['final_score_away']):
+                                goals_for += match['final_score_away']
+                                goals_against += match['final_score_home']
+                                if match['final_score_away'] > match['final_score_home']:
+                                    wins += 1
+                                elif match['final_score_away'] == match['final_score_home']:
+                                    draws += 1
+                                else:
+                                    losses += 1
+                        
+                        points = wins * 3 + draws * 2 + losses * 1
+                        goal_diff = goals_for - goals_against
+                        team_stats[tid] = {
+                            'points': points,
+                            'goal_diff': goal_diff,
+                            'goals_for': goals_for
+                        }
+                    
+                    # Trier les équipes par points, puis différence de buts, puis buts marqués
+                    sorted_teams = sorted(team_stats.items(), 
+                                        key=lambda x: (x[1]['points'], x[1]['goal_diff'], x[1]['goals_for']), 
+                                        reverse=True)
+                    
+                    # Créer un dictionnaire avec les rangs
+                    team_ranks = {}
+                    for rank, (tid, stats) in enumerate(sorted_teams, 1):
+                        team_ranks[tid] = rank
+                    
+                    return team_ranks
+                
+                team_rankings = calculate_team_ranking(matches_df, teams_df)
+                
+                # Fonction pour formater le rang avec suffixe ordinal
+                def format_rank(rank):
+                    if rank == 1:
+                        return "1er"
+                    else:
+                        return f"{rank}e"
+                
+                # Trouver la meilleure victoire et la pire défaite
+                best_win = None
+                worst_defeat = None
+                best_win_opponent_rank = float('inf')  # Plus petit rang = meilleure équipe
+                worst_defeat_opponent_rank = -1  # Plus grand rang = moins bonne équipe
+                
+                for _, match in team_matches.iterrows():
+                    if pd.notna(match['final_score_home']) and pd.notna(match['final_score_away']):
+                        is_home = match['home_team_id'] == team_id
+                        
+                        if is_home:
+                            team_score = match['final_score_home']
+                            opponent_score = match['final_score_away']
+                            opponent_id = match['away_team_id']
+                        else:
+                            team_score = match['final_score_away']
+                            opponent_score = match['final_score_home']
+                            opponent_id = match['home_team_id']
+                        
+                        opponent_rank = team_rankings.get(opponent_id, 999)
+                        opponent_name = teams_df[teams_df['id'] == opponent_id]['name'].iloc[0]
+                        
+                        # Victoire - chercher contre l'équipe la mieux classée (rang le plus bas)
+                        if team_score > opponent_score:
+                            if opponent_rank < best_win_opponent_rank:
+                                best_win_opponent_rank = opponent_rank
+                                best_win = {
+                                    'opponent': opponent_name,
+                                    'score_for': int(team_score),
+                                    'score_against': int(opponent_score),
+                                    'date': match['match_date'],
+                                    'is_home': is_home,
+                                    'opponent_rank': opponent_rank
+                                }
+                        
+                        # Défaite - chercher contre l'équipe la moins bien classée (rang le plus élevé)
+                        elif team_score < opponent_score:
+                            if opponent_rank > worst_defeat_opponent_rank:
+                                worst_defeat_opponent_rank = opponent_rank
+                                worst_defeat = {
+                                    'opponent': opponent_name,
+                                    'score_for': int(team_score),
+                                    'score_against': int(opponent_score),
+                                    'date': match['match_date'],
+                                    'is_home': is_home,
+                                    'opponent_rank': opponent_rank
+                                }
+                
+                col_win, col_defeat = st.columns(2)
+                
+                with col_win:
+                    st.markdown("#### 🏆 Meilleure Victoire")
+                    if best_win:
+                        location = "🏠 Domicile" if best_win['is_home'] else "✈️ Extérieur"
+                        rank_text = format_rank(best_win['opponent_rank'])
+                        st.success(f"**{best_win['opponent']}** ({rank_text})")
+                        st.metric(
+                            "Score",
+                            f"{best_win['score_for']} - {best_win['score_against']}",
+                            delta=f"+{best_win['score_for'] - best_win['score_against']}"
+                        )
+                        st.caption(f"{location} • {pd.to_datetime(best_win['date']).strftime('%d/%m/%Y')}")
+                    else:
+                        st.info("Aucune victoire enregistrée")
+                
+                with col_defeat:
+                    st.markdown("#### 😞 Pire Défaite")
+                    if worst_defeat:
+                        location = "🏠 Domicile" if worst_defeat['is_home'] else "✈️ Extérieur"
+                        rank_text = format_rank(worst_defeat['opponent_rank'])
+                        st.error(f"**{worst_defeat['opponent']}** ({rank_text})")
+                        st.metric(
+                            "Score",
+                            f"{worst_defeat['score_for']} - {worst_defeat['score_against']}",
+                            delta=f"{worst_defeat['score_for'] - worst_defeat['score_against']}"
+                        )
+                        st.caption(f"{location} • {pd.to_datetime(worst_defeat['date']).strftime('%d/%m/%Y')}")
+                    else:
+                        st.info("Aucune défaite enregistrée")
+                
+                st.markdown("---")
+                
+                # === PLUS LARGE VICTOIRE ET PLUS LARGE DÉFAITE ===
+                st.markdown("### 🎯 Plus Large Victoire & 💔 Plus Large Défaite")
+                
+                # Trouver la plus large victoire et la plus large défaite
+                largest_win = None
+                largest_defeat = None
+                largest_win_diff = 0
+                largest_defeat_diff = 0
+                
+                for _, match in team_matches.iterrows():
+                    if pd.notna(match['final_score_home']) and pd.notna(match['final_score_away']):
+                        is_home = match['home_team_id'] == team_id
+                        
+                        if is_home:
+                            team_score = match['final_score_home']
+                            opponent_score = match['final_score_away']
+                            opponent_id = match['away_team_id']
+                        else:
+                            team_score = match['final_score_away']
+                            opponent_score = match['final_score_home']
+                            opponent_id = match['home_team_id']
+                        
+                        goal_diff = abs(team_score - opponent_score)
+                        opponent_name = teams_df[teams_df['id'] == opponent_id]['name'].iloc[0]
+                        
+                        # Victoire - chercher la plus grande différence
+                        if team_score > opponent_score:
+                            if goal_diff > largest_win_diff:
+                                largest_win_diff = goal_diff
+                                largest_win = {
+                                    'opponent': opponent_name,
+                                    'score_for': int(team_score),
+                                    'score_against': int(opponent_score),
+                                    'date': match['match_date'],
+                                    'is_home': is_home,
+                                    'goal_diff': int(goal_diff)
+                                }
+                        
+                        # Défaite - chercher la plus grande différence
+                        elif team_score < opponent_score:
+                            if goal_diff > largest_defeat_diff:
+                                largest_defeat_diff = goal_diff
+                                largest_defeat = {
+                                    'opponent': opponent_name,
+                                    'score_for': int(team_score),
+                                    'score_against': int(opponent_score),
+                                    'date': match['match_date'],
+                                    'is_home': is_home,
+                                    'goal_diff': int(goal_diff)
+                                }
+                
+                col_large_win, col_large_defeat = st.columns(2)
+                
+                with col_large_win:
+                    st.markdown("#### 🎯 Plus Large Victoire")
+                    if largest_win:
+                        location = "🏠 Domicile" if largest_win['is_home'] else "✈️ Extérieur"
+                        st.success(f"**{largest_win['opponent']}**")
+                        st.metric(
+                            "Score",
+                            f"{largest_win['score_for']} - {largest_win['score_against']}",
+                            delta=f"+{largest_win['goal_diff']} buts"
+                        )
+                        st.caption(f"{location} • {pd.to_datetime(largest_win['date']).strftime('%d/%m/%Y')}")
+                    else:
+                        st.info("Aucune victoire enregistrée")
+                
+                with col_large_defeat:
+                    st.markdown("#### 💔 Plus Large Défaite")
+                    if largest_defeat:
+                        location = "🏠 Domicile" if largest_defeat['is_home'] else "✈️ Extérieur"
+                        st.error(f"**{largest_defeat['opponent']}**")
+                        st.metric(
+                            "Score",
+                            f"{largest_defeat['score_for']} - {largest_defeat['score_against']}",
+                            delta=f"-{largest_defeat['goal_diff']} buts"
+                        )
+                        st.caption(f"{location} • {pd.to_datetime(largest_defeat['date']).strftime('%d/%m/%Y')}")
+                    else:
+                        st.info("Aucune défaite enregistrée")
+                
+                st.markdown("---")
+                
                 # === STATISTIQUES DES JOUEURS ===
                 if not player_stats_df.empty:
                     st.markdown("### 👥 Statistiques des Joueurs")
@@ -391,4 +626,4 @@ except Exception as e:
     st.error(f"Erreur lors du chargement des données : {str(e)}")
     st.info("Veuillez vous assurer que votre connexion Supabase est correctement configurée.")
     with st.expander("Détails de l'erreur"):
-        st.error(str(e))
+        st.code(traceback.format_exc())
