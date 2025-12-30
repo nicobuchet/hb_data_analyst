@@ -33,6 +33,7 @@ with st.sidebar:
     st.page_link("pages/2_🏆_Rankings.py", label="Classements", icon="🏆")
     st.page_link("pages/3_📈_Team_Stats.py", label="Statistiques d'équipes", icon="📈")
     st.page_link("pages/4_👤_Player_Stats.py", label="Statistiques de joueurs", icon="👤")
+    st.page_link("pages/5_🏟️_Club_Report.py", label="Rapport de Club", icon="🏟️")
     
     st.markdown("---")
     st.info("**Page actuelle:** Statistiques de joueurs")
