@@ -151,61 +151,76 @@ try:
                 # Statistiques domicile/extérieur
                 st.markdown("### 🏠 Performance Domicile vs Extérieur")
                 
-                col10, col11 = st.columns(2)
+                # Calculer les stats domicile
+                home_wins = 0
+                home_draws = 0
+                home_losses = 0
+                home_goals_for = 0
+                home_goals_against = 0
                 
-                with col10:
-                    st.markdown("#### 🏠 À domicile")
-                    home_wins = 0
-                    home_draws = 0
-                    home_losses = 0
-                    home_goals_for = 0
-                    home_goals_against = 0
-                    
-                    for _, match in team_matches[team_matches['home_team_id'] == team_id].iterrows():
-                        if pd.notna(match['final_score_home']) and pd.notna(match['final_score_away']):
-                            home_goals_for += match['final_score_home']
-                            home_goals_against += match['final_score_away']
-                            
-                            if match['final_score_home'] > match['final_score_away']:
-                                home_wins += 1
-                            elif match['final_score_home'] == match['final_score_away']:
-                                home_draws += 1
-                            else:
-                                home_losses += 1
-                    
-                    st.metric("Matchs à domicile", home_matches)
+                for _, match in team_matches[team_matches['home_team_id'] == team_id].iterrows():
+                    if pd.notna(match['final_score_home']) and pd.notna(match['final_score_away']):
+                        home_goals_for += match['final_score_home']
+                        home_goals_against += match['final_score_away']
+                        
+                        if match['final_score_home'] > match['final_score_away']:
+                            home_wins += 1
+                        elif match['final_score_home'] == match['final_score_away']:
+                            home_draws += 1
+                        else:
+                            home_losses += 1
+                
+                # Calculer les stats extérieur
+                away_wins = 0
+                away_draws = 0
+                away_losses = 0
+                away_goals_for = 0
+                away_goals_against = 0
+                
+                for _, match in team_matches[team_matches['away_team_id'] == team_id].iterrows():
+                    if pd.notna(match['final_score_home']) and pd.notna(match['final_score_away']):
+                        away_goals_for += match['final_score_away']
+                        away_goals_against += match['final_score_home']
+                        
+                        if match['final_score_away'] > match['final_score_home']:
+                            away_wins += 1
+                        elif match['final_score_away'] == match['final_score_home']:
+                            away_draws += 1
+                        else:
+                            away_losses += 1
+                
+                # Afficher en grille
+                st.markdown("#### 🏠 À domicile")
+                col_h1, col_h2, col_h3, col_h4, col_h5, col_h6 = st.columns(6)
+                
+                with col_h1:
+                    st.metric("Matchs", home_matches)
+                with col_h2:
                     st.metric("Victoires", home_wins)
+                with col_h3:
                     st.metric("Nuls", home_draws)
+                with col_h4:
                     st.metric("Défaites", home_losses)
-                    st.metric("Buts marqués", int(home_goals_for))
-                    st.metric("Buts encaissés", int(home_goals_against))
+                with col_h5:
+                    st.metric("Buts pour", int(home_goals_for))
+                with col_h6:
+                    st.metric("Buts contre", int(home_goals_against))
                 
-                with col11:
-                    st.markdown("#### ✈️ À l'extérieur")
-                    away_wins = 0
-                    away_draws = 0
-                    away_losses = 0
-                    away_goals_for = 0
-                    away_goals_against = 0
-                    
-                    for _, match in team_matches[team_matches['away_team_id'] == team_id].iterrows():
-                        if pd.notna(match['final_score_home']) and pd.notna(match['final_score_away']):
-                            away_goals_for += match['final_score_away']
-                            away_goals_against += match['final_score_home']
-                            
-                            if match['final_score_away'] > match['final_score_home']:
-                                away_wins += 1
-                            elif match['final_score_away'] == match['final_score_home']:
-                                away_draws += 1
-                            else:
-                                away_losses += 1
-                    
-                    st.metric("Matchs à l'extérieur", away_matches)
+                st.markdown("#### ✈️ À l'extérieur")
+                col_a1, col_a2, col_a3, col_a4, col_a5, col_a6 = st.columns(6)
+                
+                with col_a1:
+                    st.metric("Matchs", away_matches)
+                with col_a2:
                     st.metric("Victoires", away_wins)
+                with col_a3:
                     st.metric("Nuls", away_draws)
+                with col_a4:
                     st.metric("Défaites", away_losses)
-                    st.metric("Buts marqués", int(away_goals_for))
-                    st.metric("Buts encaissés", int(away_goals_against))
+                with col_a5:
+                    st.metric("Buts pour", int(away_goals_for))
+                with col_a6:
+                    st.metric("Buts contre", int(away_goals_against))
                 
                 st.markdown("---")
                 
